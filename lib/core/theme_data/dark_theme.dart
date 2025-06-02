@@ -1,7 +1,9 @@
+import 'package:chatwave/core/constants/const.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_color.dart';
 
 final ThemeData darkTheme = ThemeData(
+  fontFamily: FontAsset.mulish,
   brightness: Brightness.dark,
   primaryColor: AppColors.primary,
   scaffoldBackgroundColor: AppColors.backgroundDark,
@@ -19,11 +21,5 @@ final ThemeData darkTheme = ThemeData(
   textTheme: TextTheme(
     bodyLarge: TextStyle(color: Colors.white),
     bodyMedium: TextStyle(color: AppColors.textSecondary),
-  ),
-  inputDecorationTheme: InputDecorationTheme(
-    border: OutlineInputBorder(),
-    focusedBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: AppColors.primary),
-    ),
   ),
 );
