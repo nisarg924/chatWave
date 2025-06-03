@@ -1,10 +1,19 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pinput/pinput.dart';
+// lib/feature/user/verify_phone_screen.dart
+import 'package:chatwave/core/constants/app_color.dart';
+import 'package:chatwave/core/constants/app_image.dart';
 import 'package:chatwave/core/constants/app_string.dart';
+import 'package:chatwave/core/constants/const.dart';
 import 'package:chatwave/core/constants/dimensions.dart';
+import 'package:chatwave/core/utils/navigation_manager.dart';
 import 'package:chatwave/core/utils/style.dart';
+import 'package:chatwave/core/widgets/custom_button.dart';
+import 'package:chatwave/feature/user/cubit/auth_cubit.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pinput/pinput.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:chatwave/core/utils/router.dart';
 
 class VerifyPhoneScreen extends StatefulWidget {
   final String verificationId;
@@ -22,92 +31,166 @@ class VerifyPhoneScreen extends StatefulWidget {
 
 class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
   final TextEditingController otpController = TextEditingController();
-  bool isVerifying = false;
+  final VerifyOtpCubit _verifyOtpCubit = VerifyOtpCubit();
 
-  Future<void> _verifyOtp() async {
-    final otp = otpController.text.trim();
-    if (otp.length != 6) {
-      Fluttertoast.showToast(msg: AppString.enter6DigitOtp);
-      return;
-    }
-
-    setState(() => isVerifying = true);
-
-    try {
-      final credential = PhoneAuthProvider.credential(
-        verificationId: widget.verificationId,
-        smsCode: otp,
-      );
-
-      final userCredential =
-      await FirebaseAuth.instance.signInWithCredential(credential);
-
-      if (userCredential.user != null) {
-        Fluttertoast.showToast(msg: AppString.otpVerified);
-        // Navigate to home or main screen
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    } on FirebaseAuthException catch (e) {
-      Fluttertoast.showToast(msg: "OTP verification failed: ${e.message}");
-    } finally {
-      setState(() => isVerifying = false);
-    }
+  @override
+  void dispose() {
+    otpController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Verify Phone")),
-      body: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: Dimensions.COMMON_PADDING_FOR_SCREEN,
-          vertical: Dimensions.h30,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              "OTP sent to ${widget.phoneNumber}",
-              style: fontStyleMedium16.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 32),
+    return BlocProvider<VerifyOtpCubit>.value(
+      value: _verifyOtpCubit,
+      child: Scaffold(
+        body: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: Dimensions.COMMON_PADDING_FOR_SCREEN,
+            vertical: Dimensions.h30,
+          ),
+          child: BlocConsumer<VerifyOtpCubit, VerifyOtpState>(
+            listener: (context, state) async {
+              if (state is VerifyOtpSuccess) {
+                // On success, SharedPreferences + Firestore write are handled in onUserVerified callback
+              }
+            },
+            builder: (context, state) {
+              final isLoading = state is VerifyOtpLoading;
 
-            Pinput(
-              controller: otpController,
-              length: 6,
-              defaultPinTheme: PinTheme(
-                width: 50,
-                height: 56,
-                textStyle: const TextStyle(fontSize: 20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: theme.colorScheme.primary),
-                ),
-              ),
-              onCompleted: (value) => _verifyOtp(),
-            ),
-
-            const SizedBox(height: 40),
-
-            ElevatedButton(
-              onPressed: isVerifying ? null : _verifyOtp,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
-              child: Text(
-                isVerifying ? "Verifying..." : "Verify OTP",
-                style: fontStyleSemiBold18.copyWith(
-                  color: theme.colorScheme.onPrimary,
-                ),
-              ),
-            ),
-          ],
+              return Stack(
+                children: [
+                  _buildMainContent(theme),
+                  if (isLoading)
+                    Container(
+                      color: Colors.black.withOpacity(0.5),
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              );
+            },
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMainContent(ThemeData theme) {
+    return LayoutBuilder(
+      builder: (ctx, constraints){
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+              minWidth: constraints.maxWidth,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  elevation: 5,
+                  shadowColor: AppColors.primary.withOpacity(0.3),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Image.asset(
+                      AppImage.icAppLogo,
+                      height: Dimensions.h80,
+                      width: Dimensions.w80,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+
+                verticalHeight(Dimensions.h16),
+
+                Text(
+                  AppString.enterOtp,
+                  style: fontStyleBold22.copyWith(color: AppColors.primary),
+                ),
+
+                verticalHeight(Dimensions.h10),
+
+                Text(
+                  '${AppString.otpSent}${widget.phoneNumber}',
+                  style: fontStyleMedium16.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+
+                verticalHeight(Dimensions.h30),
+
+                Pinput(
+                  controller: otpController,
+                  length: 6,
+                  defaultPinTheme: PinTheme(
+                    width: Dimensions.w45,
+                    height: Dimensions.h45,
+                    textStyle: fontStyleBold20.copyWith(color: theme.colorScheme.onSurface),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: theme.colorScheme.primary),
+                    ),
+                  ),
+                ),
+
+                verticalHeight(Dimensions.h30),
+
+                CustomButton(
+                  text: stateIsLoading(context) ? 'Verifying...' : AppString.verify,
+                  onPressed: stateIsLoading(context) ? null : _onTapVerify,
+                  textStyle: fontStyleSemiBold18.copyWith(
+                    color: theme.colorScheme.surface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+    );
+  }
+
+  bool stateIsLoading(BuildContext context) {
+    return _verifyOtpCubit.state is VerifyOtpLoading;
+  }
+
+  void _onTapVerify() {
+    final otp = otpController.text.trim();
+    final verificationId = widget.verificationId;
+    final phone = widget.phoneNumber;
+
+    _verifyOtpCubit.verifyOtp(
+      context: context,
+      verificationId: verificationId,
+      otp: otp,
+      onSuccess: () {
+        // Already handled in onUserVerified; just navigate here if you like
+      },
+      onUserVerified: (uid, phoneNumber) async {
+        // 1) Save to SharedPreferences:
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('uid', uid);
+        await prefs.setString('phoneNumber', phoneNumber);
+
+        // 2) Write basic user data to Firestore:
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'uid': uid,
+          'phoneNumber': phoneNumber,
+          'lastLogin': FieldValue.serverTimestamp(),
+          'isLoggedIn': true,
+        }, SetOptions(merge: true));
+
+        // 3) Navigate to HomeScreen:
+       navigateToPageAndRemoveAllPage(context, HOME_ROUTE);
+      },
     );
   }
 }

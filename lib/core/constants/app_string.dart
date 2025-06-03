@@ -9,5 +9,9 @@ class AppString{
   static const pleaseEnterNumber = "Please enter a valid number";
   static const enter6DigitOtp = "Please enter a 6-digit OTP";
   static const otpVerified = "OTP Verified Successfully";
+  static const enterOtp = "Enter OTP";
+  static const verify = "Verify";
+  static const otpSent = "OTP sent to ";
 
+  static const homeTitle = "ChatWave";
 }

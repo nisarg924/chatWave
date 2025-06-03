@@ -9,6 +9,11 @@ void snackBar(String text,BuildContext context){
   ScaffoldMessenger.of(context)
       .showSnackBar(SnackBar(content: Text(text)));
 }
+CircularProgressIndicator loader(){
+  return CircularProgressIndicator(
+    color: AppColors.primary,
+  );
+}
 
 Widget verticalHeight(double height) {
   return SizedBox(
