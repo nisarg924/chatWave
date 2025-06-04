@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:uuid/uuid.dart';
 
+String capitalize(String input) {
+  if (input.isEmpty) return input;
+  return input[0].toUpperCase() + input.substring(1);
+}
+
 void snackBar(String text,BuildContext context){
   ScaffoldMessenger.of(context)
       .showSnackBar(SnackBar(content: Text(text)));

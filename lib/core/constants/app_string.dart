@@ -13,5 +13,6 @@ class AppString{
   static const verify = "Verify";
   static const otpSent = "OTP sent to ";
 
-  static const homeTitle = "ChatWave";
+
+  static const enterYourName = "Enter your name";
 }

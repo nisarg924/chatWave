@@ -8,7 +8,8 @@ class AppColors {
   static const Color textPrimary = Color(0xFF1C1C1C);
   static const Color textSecondary = Color(0xFF7B7B7B);
   static const Color chatBubbleUser = Color(0xFFDCF8C6);
-  static const Color chatBubbleOther = Color(0xFFFFFFFF);
+  static const Color whiteColor = Color(0xFFFFFFFF);
   static const Color notificationRed = Color(0xFFFF3B30);
+  static const Color blackColor = Color(0xFF000000);
   static const Color borderColor = Color(0xFF000000);
 }

@@ -102,7 +102,7 @@ class _CountryCodeTextFieldState extends State<CountryCodeTextField> {
                 filled: true,
                 hintText: widget.hintText ?? "Enter Phone Number",
                 hintStyle:
-                fontStyleLight15.apply(color: Theme.of(context).hintColor),
+                fontStyleLight15.apply(color: Theme.of(context).brightness==Brightness.light?Theme.of(context).hintColor:Theme.of(context).colorScheme.surface),
               ),
               onChanged: (val) {
                 if (widget.onChanged != null) {

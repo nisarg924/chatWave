@@ -1,13 +1,10 @@
-import 'dart:developer';
 
-import 'package:chatwave/core/constants/app_string.dart';
 import 'package:chatwave/core/utils/navigation_manager.dart';
 import 'package:chatwave/feature/user/verify_phone_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:chatwave/core/constants/const.dart';
 
 abstract class SendOtpState {}
 
@@ -27,14 +24,19 @@ class SendOtpFailure extends SendOtpState {
 class SendOtpCubit extends Cubit<SendOtpState> {
   SendOtpCubit() : super(SendOtpInitial());
 
-  Future<void> sendOtp(BuildContext context, String phoneNumber) async {
+  /// Send OTP via Firebase Auth, then navigate to VerifyPhoneScreen
+  Future<void> sendOtp(
+      BuildContext context,
+      String phoneNumber,
+      String name,
+      ) async {
     emit(SendOtpLoading());
 
     await FirebaseAuth.instance.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       timeout: const Duration(seconds: 60),
       verificationCompleted: (PhoneAuthCredential credential) {
-        // Auto‐verification callbacks (Android) – we’re not handling that here.
+        // On Android automatic retrieval – not handled here
       },
       verificationFailed: (FirebaseAuthException e) {
         emit(SendOtpFailure(e.message ?? 'Verification failed'));
@@ -42,12 +44,13 @@ class SendOtpCubit extends Cubit<SendOtpState> {
       },
       codeSent: (String verificationId, int? resendToken) async {
         emit(SendOtpSuccess());
-        // Navigate to VerifyPhoneScreen, passing the verificationId:
+        // Navigate to VerifyPhoneScreen, passing along phone & name
         await navigateToPage(
           context,
           VerifyPhoneScreen(
             verificationId: verificationId,
             phoneNumber: phoneNumber,
+            name: name,
           ),
         );
       },
@@ -103,7 +106,6 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
       if (user != null) {
         emit(VerifyOtpSuccess());
         Fluttertoast.showToast(msg: 'OTP Verified');
-        // Pass back the UID + phoneNumber so screen can write to Firestore & SharedPrefs:
         onUserVerified(user.uid, user.phoneNumber ?? '');
         onSuccess();
       }

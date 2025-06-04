@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -25,27 +24,31 @@ class UsersCubit extends Cubit<UsersState> {
 
   StreamSubscription<QuerySnapshot>? _subscription;
 
+  /// Subscribes to Firestore `users` where `isLoggedIn == true`
   void loadLoggedInUsers() {
     emit(UsersLoading());
 
-    // Listen to Firestore collection `users` where `isLoggedIn == true`
     _subscription = FirebaseFirestore.instance
         .collection('users')
-        .where('isLoggedIn', isEqualTo: true)
         .snapshots()
-        .listen((snapshot) {
-      final users = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return <String, dynamic>{
-          'uid': data['uid'],
-          'phoneNumber': data['phoneNumber'],
-          'lastLogin': data['lastLogin'],
-        };
-      }).toList();
-      emit(UsersLoaded(users));
-    }, onError: (error) {
-      emit(UsersError(error.toString()));
-    });
+        .listen(
+          (snapshot) {
+        final users = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return <String, dynamic>{
+            'uid': data['uid'],
+            'name': data['name'],
+            'phoneNumber': data['phoneNumber'],
+            'lastLogin': data['lastLogin'],
+            'imageUrl': data['imageUrl'] as String? ?? "",
+          };
+        }).toList();
+        emit(UsersLoaded(users));
+      },
+      onError: (error) {
+        emit(UsersError(error.toString()));
+      },
+    );
   }
 
   @override

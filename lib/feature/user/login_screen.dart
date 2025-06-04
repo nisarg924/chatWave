@@ -7,13 +7,11 @@ import 'package:chatwave/core/constants/dimensions.dart';
 import 'package:chatwave/core/utils/style.dart';
 import 'package:chatwave/core/widgets/coutry_text_field.dart';
 import 'package:chatwave/core/widgets/custom_button.dart';
+import 'package:chatwave/core/widgets/custom_text_field.dart';
 import 'package:chatwave/feature/user/cubit/auth_cubit.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,15 +22,20 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
   final FocusNode phoneFocus = FocusNode();
+  final FocusNode nameFocus = FocusNode();
   String countryCode = "+91";
 
   final SendOtpCubit _sendOtpCubit = SendOtpCubit();
 
   @override
   void dispose() {
+    _sendOtpCubit.close();
     phoneController.dispose();
+    nameController.dispose();
     phoneFocus.dispose();
+    nameFocus.dispose();
     super.dispose();
   }
 
@@ -125,6 +128,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   verticalHeight(40),
 
+                  // Name Input
+                  CustomTextField(
+                    hintText: AppString.enterYourName,
+                    controller: nameController,
+                    focusNode: nameFocus,
+                    inputType: TextInputType.name,
+                  ),
+
+                  verticalHeight(Dimensions.h20),
+
                   // Phone Input
                   CountryCodeTextField(
                     focusNode: phoneFocus,
@@ -167,10 +180,19 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _sendOtp() {
-    final raw = phoneController.text.trim();
-    final phoneNumber = "$countryCode$raw";
+    final rawPhone = phoneController.text.trim();
+    final phoneNumber = "$countryCode$rawPhone";
+    final name = nameController.text.trim();
 
-    if (raw.isEmpty || raw.length < 8) {
+    if (name.isEmpty) {
+      Fluttertoast.showToast(
+        msg: "Please enter your name",
+        toastLength: Toast.LENGTH_LONG,
+      );
+      return;
+    }
+
+    if (rawPhone.isEmpty || rawPhone.length < 8) {
       Fluttertoast.showToast(
         msg: AppString.pleaseEnterNumber,
         toastLength: Toast.LENGTH_LONG,
@@ -179,6 +201,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     FocusManager.instance.primaryFocus?.unfocus();
-    _sendOtpCubit.sendOtp(context, phoneNumber);
+    _sendOtpCubit.sendOtp(context, phoneNumber, name);
   }
 }

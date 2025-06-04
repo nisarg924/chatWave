@@ -18,11 +18,13 @@ import 'package:chatwave/core/utils/router.dart';
 class VerifyPhoneScreen extends StatefulWidget {
   final String verificationId;
   final String phoneNumber;
+  final String name;
 
   const VerifyPhoneScreen({
     super.key,
     required this.verificationId,
     required this.phoneNumber,
+    required this.name,
   });
 
   @override
@@ -36,6 +38,7 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
   @override
   void dispose() {
     otpController.dispose();
+    _verifyOtpCubit.close();
     super.dispose();
   }
 
@@ -52,9 +55,9 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
             vertical: Dimensions.h30,
           ),
           child: BlocConsumer<VerifyOtpCubit, VerifyOtpState>(
-            listener: (context, state) async {
-              if (state is VerifyOtpSuccess) {
-                // On success, SharedPreferences + Firestore write are handled in onUserVerified callback
+            listener: (context, state) {
+              if (state is VerifyOtpFailure) {
+                // Error toast already shown inside Cubit
               }
             },
             builder: (context, state) {
@@ -79,8 +82,9 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
 
   Widget _buildMainContent(ThemeData theme) {
     return LayoutBuilder(
-      builder: (ctx, constraints){
+      builder: (ctx, constraints) {
         return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: constraints.maxHeight,
@@ -90,6 +94,7 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Logo card
                 Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -131,7 +136,8 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
                   defaultPinTheme: PinTheme(
                     width: Dimensions.w45,
                     height: Dimensions.h45,
-                    textStyle: fontStyleBold20.copyWith(color: theme.colorScheme.onSurface),
+                    textStyle: fontStyleBold20.copyWith(
+                        color: theme.colorScheme.onSurface),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: theme.colorScheme.primary),
@@ -142,7 +148,9 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
                 verticalHeight(Dimensions.h30),
 
                 CustomButton(
-                  text: stateIsLoading(context) ? 'Verifying...' : AppString.verify,
+                  text: stateIsLoading(context)
+                      ? 'Verifying...'
+                      : AppString.verify,
                   onPressed: stateIsLoading(context) ? null : _onTapVerify,
                   textStyle: fontStyleSemiBold18.copyWith(
                     color: theme.colorScheme.surface,
@@ -152,8 +160,7 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
             ),
           ),
         );
-      }
-
+      },
     );
   }
 
@@ -165,13 +172,14 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
     final otp = otpController.text.trim();
     final verificationId = widget.verificationId;
     final phone = widget.phoneNumber;
+    final name = widget.name;
 
     _verifyOtpCubit.verifyOtp(
       context: context,
       verificationId: verificationId,
       otp: otp,
       onSuccess: () {
-        // Already handled in onUserVerified; just navigate here if you like
+        // Nothing else to do here; onUserVerified will navigate.
       },
       onUserVerified: (uid, phoneNumber) async {
         // 1) Save to SharedPreferences:
@@ -179,18 +187,21 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
         await prefs.setBool('isLoggedIn', true);
         await prefs.setString('uid', uid);
         await prefs.setString('phoneNumber', phoneNumber);
+        await prefs.setString('name', name);
 
-        // 2) Write basic user data to Firestore:
+        // 2) Write user data (including name) to Firestore:
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'uid': uid,
           'phoneNumber': phoneNumber,
+          'name': name,                // 👈 Store name
           'lastLogin': FieldValue.serverTimestamp(),
           'isLoggedIn': true,
         }, SetOptions(merge: true));
 
-        // 3) Navigate to HomeScreen:
-       navigateToPageAndRemoveAllPage(context, HOME_ROUTE);
+        // 3) Navigate to HomeScreen (remove all previous routes):
+        navigateToPageAndRemoveAllPage(context, HOME_ROUTE);
       },
     );
   }
 }
+
