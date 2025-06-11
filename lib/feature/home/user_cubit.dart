@@ -22,33 +22,32 @@ class UsersError extends UsersState {
 class UsersCubit extends Cubit<UsersState> {
   UsersCubit() : super(UsersInitial());
 
-  StreamSubscription<QuerySnapshot>? _subscription;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
 
-  /// Subscribes to Firestore `users` where `isLoggedIn == true`
-  void loadLoggedInUsers() {
+  /// Load all users (remove the isLoggedIn filter if it’s causing your list to be empty)
+  void loadUsers() {
     emit(UsersLoading());
 
+    // If you want *all* users (not just isLoggedIn:true), do:
     _subscription = FirebaseFirestore.instance
         .collection('users')
+    //.where('isLoggedIn', isEqualTo: true)  // ← remove or comment out
         .snapshots()
-        .listen(
-          (snapshot) {
-        final users = snapshot.docs.map((doc) {
-          final data = doc.data();
-          return <String, dynamic>{
-            'uid': data['uid'],
-            'name': data['name'],
-            'phoneNumber': data['phoneNumber'],
-            'lastLogin': data['lastLogin'],
-            'imageUrl': data['imageUrl'] as String? ?? "",
-          };
-        }).toList();
-        emit(UsersLoaded(users));
-      },
-      onError: (error) {
-        emit(UsersError(error.toString()));
-      },
-    );
+        .listen((snapshot) {
+      final users = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return <String, dynamic>{
+          'uid': data['uid'],
+          'name': data['name'],
+          'phoneNumber': data['phoneNumber'],
+          'lastLogin': data['lastLogin'],
+          'imageUrl': data['imageUrl'] as String? ?? '',
+        };
+      }).toList();
+      emit(UsersLoaded(users));
+    }, onError: (error) {
+      emit(UsersError(error.toString()));
+    });
   }
 
   @override

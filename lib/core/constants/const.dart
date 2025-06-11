@@ -5,15 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:uuid/uuid.dart';
 
+
 String capitalize(String input) {
   if (input.isEmpty) return input;
   return input[0].toUpperCase() + input.substring(1);
+}
+
+Brightness isItDarkTheme(){
+  return Brightness.dark;
 }
 
 void snackBar(String text,BuildContext context){
   ScaffoldMessenger.of(context)
       .showSnackBar(SnackBar(content: Text(text)));
 }
+BoxShadow boxShadow(){
+  return BoxShadow();
+}
+
 CircularProgressIndicator loader(){
   return CircularProgressIndicator(
     color: AppColors.primary,
@@ -33,6 +42,9 @@ Widget horizontalWidth(double width) {
 }
 
 class Const {
+  static const int appId= 1049202539;
+  static const String appSign = "13787b67728a5984f5bfdbfc37084480f7350fe7fc5d4c86c15521b835620c5b";
+
   String emailPattern =
       r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$';
 

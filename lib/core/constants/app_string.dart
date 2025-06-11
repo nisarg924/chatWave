@@ -12,7 +12,26 @@ class AppString{
   static const enterOtp = "Enter OTP";
   static const verify = "Verify";
   static const otpSent = "OTP sent to ";
-
-
+  static const login = "Login";
   static const enterYourName = "Enter your name";
+  static const searchUsers = "Search users...";
+  static const noOtherUsers = "No other users found.";
+  static const emptyString = "";
+  static const error = "Error: ";
+  static const users = "users";
+  static const chats = "chats";
+  static const uid = 'uid';
+  static const name = 'name';
+  static const noName = 'No Name';
+  static const imageUrl = 'imageUrl';
+  static const phoneNumber = 'phoneNumber';
+  static const appState = 'App state: ';
+  static const camera = 'Camera';
+  static const gallery = 'Gallery';
+  static const voiceNotEnabled = 'Voice recording not implemented.';
+  static const videoNotEnabled = 'Video call not implemented.';
+  static const messageHint = 'Type a message...';
+  static const online = "Online";
+  static const status = "status";
+  static const available = "Available";
 }

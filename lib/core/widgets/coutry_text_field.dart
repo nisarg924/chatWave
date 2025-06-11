@@ -93,7 +93,7 @@ class _CountryCodeTextFieldState extends State<CountryCodeTextField> {
               onFieldSubmitted: widget.onFieldSubmit,
               controller: widget.textController,
               inputFormatters: widget.inputFormatters,
-              cursorColor: Theme.of(context).colorScheme.onSurface,
+              cursorColor: AppColors.blackColor,
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,

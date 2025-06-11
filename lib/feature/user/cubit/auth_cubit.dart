@@ -1,10 +1,14 @@
-
+import 'package:chatwave/core/constants/app_string.dart';
 import 'package:chatwave/core/utils/navigation_manager.dart';
 import 'package:chatwave/feature/user/verify_phone_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
+import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 
 abstract class SendOtpState {}
 
@@ -26,10 +30,10 @@ class SendOtpCubit extends Cubit<SendOtpState> {
 
   /// Send OTP via Firebase Auth, then navigate to VerifyPhoneScreen
   Future<void> sendOtp(
-      BuildContext context,
-      String phoneNumber,
-      String name,
-      ) async {
+    BuildContext context,
+    String phoneNumber,
+    String name,
+  ) async {
     emit(SendOtpLoading());
 
     await FirebaseAuth.instance.verifyPhoneNumber(
@@ -61,7 +65,6 @@ class SendOtpCubit extends Cubit<SendOtpState> {
   }
 }
 
-
 // verify_otp_state.dart
 abstract class VerifyOtpState {}
 
@@ -73,6 +76,7 @@ class VerifyOtpSuccess extends VerifyOtpState {}
 
 class VerifyOtpFailure extends VerifyOtpState {
   final String message;
+
   VerifyOtpFailure(this.message);
 }
 
@@ -100,11 +104,11 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
         verificationId: verificationId,
         smsCode: otp,
       );
-      final userCredential =
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user;
       if (user != null) {
         emit(VerifyOtpSuccess());
+
         Fluttertoast.showToast(msg: 'OTP Verified');
         onUserVerified(user.uid, user.phoneNumber ?? '');
         onSuccess();

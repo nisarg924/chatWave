@@ -32,7 +32,7 @@ class CustomTextField extends StatelessWidget {
       ),
       controller: controller,
       keyboardType: inputType,
-      cursorColor: Theme.of(context).colorScheme.onSurface,
+      cursorColor: AppColors.blackColor,
       focusNode: focusNode,
       style: fontStyleMedium16.copyWith(color: Theme.of(context).brightness==Brightness.dark?Theme.of(context).colorScheme.surface:Colors.black),
     );

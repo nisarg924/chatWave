@@ -4,13 +4,17 @@ import 'package:chatwave/core/constants/app_image.dart';
 import 'package:chatwave/core/constants/app_string.dart';
 import 'package:chatwave/core/constants/const.dart';
 import 'package:chatwave/core/constants/dimensions.dart';
+import 'package:chatwave/core/utils/logger_util.dart';
 import 'package:chatwave/core/utils/navigation_manager.dart';
 import 'package:chatwave/core/utils/style.dart';
 import 'package:chatwave/core/widgets/custom_button.dart';
 import 'package:chatwave/feature/user/cubit/auth_cubit.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pinput/pinput.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:chatwave/core/utils/router.dart';
@@ -146,7 +150,6 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
                 ),
 
                 verticalHeight(Dimensions.h30),
-
                 CustomButton(
                   text: stateIsLoading(context)
                       ? 'Verifying...'
@@ -156,6 +159,13 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
                     color: theme.colorScheme.surface,
                   ),
                 ),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child:
+                    TextButton(onPressed: (){
+                      Fluttertoast.showToast(msg: "OTP Resend to your mobile successfully.",);
+                    }, child: Text("Resend OTP?",style: fontStyleRegular14.copyWith(color: AppColors.primary),)),
+                )
               ],
             ),
           ),
@@ -178,8 +188,22 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
       context: context,
       verificationId: verificationId,
       otp: otp,
-      onSuccess: () {
-        // Nothing else to do here; onUserVerified will navigate.
+      onSuccess: () async {
+        // 1) Save to Firestore + SharedPrefs...
+        final user = FirebaseAuth.instance.currentUser!;
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        timber(fcmToken);
+        print("token: $fcmToken");
+        if (fcmToken != null) {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'uid': user.uid,
+            'phoneNumber': phone,
+            'name': name,
+            'lastLogin': FieldValue.serverTimestamp(),
+            'isLoggedIn': true,
+            'fcmToken': fcmToken,
+          }, SetOptions(merge: true));
+        }
       },
       onUserVerified: (uid, phoneNumber) async {
         // 1) Save to SharedPreferences:

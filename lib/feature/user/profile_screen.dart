@@ -4,18 +4,20 @@ import 'dart:io';
 
 import 'package:chatwave/core/constants/app_color.dart';
 import 'package:chatwave/core/constants/app_image.dart';
+import 'package:chatwave/core/constants/app_string.dart';
 import 'package:chatwave/core/constants/const.dart';
 import 'package:chatwave/core/constants/dimensions.dart';
 import 'package:chatwave/core/utils/navigation_manager.dart';
 import 'package:chatwave/core/utils/router.dart';
 import 'package:chatwave/core/utils/style.dart';
-import 'package:chatwave/feature/home/home_screen.dart';
+import 'package:chatwave/core/widgets/custom_list_tile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:chatwave/feature/about/about_us.dart';
+import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -40,17 +42,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserInfo() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
+    final doc = await FirebaseFirestore.instance.collection(AppString.users).doc(userId).get();
     final data = doc.data();
     if (data != null) {
       setState(() {
-        _name = data['name'] as String? ?? 'No Name';
-        _phoneNumber = data['phoneNumber'] as String? ?? '';
-        _profileImageUrl = data['imageUrl'] as String?;
-        _status = data['status'] as String? ?? 'Available';
+        _name = data[AppString.name] as String? ?? AppString.noName;
+        _phoneNumber = data[AppString.phoneNumber] as String? ?? AppString.emptyString;
+        _profileImageUrl = data[AppString.imageUrl] as String?;
+        _status = data[AppString.status] as String? ?? AppString.available;
       });
     }
   }
@@ -61,18 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text('Camera'),
-            onTap: () => Navigator.pop(ctx, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library),
-            title: const Text('Gallery'),
-            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-          ),
-        ],
+        children: [CameraListTile(), GalleyListTile()],
       ),
     );
 
@@ -93,19 +81,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _uploadProfileImage(File file) async {
     setState(() => _uploading = true);
     try {
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('profile_images')
-          .child('$userId.jpg');
+      final ref = FirebaseStorage.instance.ref().child('profile_images').child('$userId.jpg');
 
       final uploadTask = ref.putFile(file);
       await uploadTask;
 
       final downloadUrl = await ref.getDownloadURL();
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .update({'imageUrl': downloadUrl});
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({'imageUrl': downloadUrl});
 
       setState(() => _profileImageUrl = downloadUrl);
     } catch (e) {
@@ -140,10 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (result != null && result.isNotEmpty && result != _name) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .update({'name': result});
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({'name': result});
       setState(() => _name = result);
     }
   }
@@ -171,22 +150,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (result != null && result.isNotEmpty && result != _status) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .update({'status': result});
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({'status': result});
       setState(() => _status = result);
     }
   }
 
   Future<void> _logout() async {
-    // await FirebaseFirestore.instance
-    //     .collection('users')
-    //     .doc(userId)
-    //     .update({'isLoggedIn': false});
     await FirebaseAuth.instance.signOut();
+    await ZegoUIKitPrebuiltCallInvitationService().uninit();
     await navigateToPageAndRemoveAllPage(context, LOGIN_ROUTE);
-
   }
 
   @override
@@ -196,13 +168,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon:  Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title:  Text(
+        title: Text(
           'Profile',
-          style: TextStyle(
-              color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
+          style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
@@ -211,290 +182,258 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: (_name == null)
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: loader())
           : SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: Dimensions.COMMON_PADDING_FOR_SCREEN,
-            vertical: Dimensions.h20,
-          ),
-          child: Column(
-            children: [
-              // Avatar with camera overlay
-              Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  Container(
-                    width: Dimensions.w120,
-                    height: Dimensions.w120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.accent,
-                        width: 4,
-                      ),
-                    ),
-                    child: ClipOval(
-                      child: (_profileImageUrl == null ||
-                          _profileImageUrl!.isEmpty)
-                          ? Image.asset(
-                        AppImage.icAppLogo,
-                        fit: BoxFit.cover,
-                      )
-                          : Image.network(
-                        _profileImageUrl!,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 2,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              if (_uploading)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  child: const CircularProgressIndicator(),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: Dimensions.COMMON_PADDING_FOR_SCREEN,
+                  vertical: Dimensions.h20,
                 ),
-
-              verticalHeight(Dimensions.h16),
-
-              // Name
-              Text(
-                capitalize(_name!),
-                style: fontStyleBold22.copyWith(
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              verticalHeight(Dimensions.h8),
-
-              // Name
-              Text(
-                _phoneNumber!,
-                style: fontStyleRegular16.copyWith(
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-
-
-              verticalHeight(Dimensions.h8),
-
-              // Edit Username link
-              GestureDetector(
-                onTap: _updateUsername,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: Column(
                   children: [
-                    Icon(
-                      Icons.edit,
-                      color: AppColors.accent,
-                      size: 18,
-                    ),
-                    horizontalWidth(6),
+                    // Avatar with camera overlay
+                    profileImage(),
+
+                    if (_uploading)
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: Dimensions.h12),
+                        child: loader(),
+                      ),
+
+                    verticalHeight(Dimensions.h16),
+
+                    // Name
                     Text(
-                      'Edit Username',
-                      style: fontStyleMedium16.copyWith(
-                        color: AppColors.accent,
+                      capitalize(_name!),
+                      style: fontStyleBold22.copyWith(
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
+                    verticalHeight(Dimensions.h8),
+
+                    // phoneNumber
+                    Text(
+                      _phoneNumber!,
+                      style: fontStyleRegular16.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+
+                    verticalHeight(Dimensions.h8),
+
+                    // Edit Username link
+                    editUsername(),
+
+                    verticalHeight(Dimensions.h24),
+
+                    // Status label + field
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Status',
+                        style: fontStyleMedium16.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    ),
+                    verticalHeight(Dimensions.h8),
+                    buildStatusBox(),
+
+                    verticalHeight(Dimensions.h30),
+
+                    // Change Password tile (optional)
+                    profileBox(
+                        text: "About Us",
+                        icon: Icons.lock,
+                        onTap: () {
+                          navigateToPage(context, AboutUsScreen());
+                        },
+                        textColor: theme.colorScheme.onSurface,
+                        iconColor: AppColors.primary),
+
+                    // Sign Out tile
+                    profileBox(text: "Sign Out", icon: Icons.exit_to_app, onTap: _logout, textColor: Colors.red, iconColor: Colors.red),
                   ],
                 ),
               ),
+            ),
+    );
+  }
 
-              verticalHeight(Dimensions.h24),
-
-              // Status label + field
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Status',
-                  style: fontStyleMedium16.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
-                  ),
+  Widget profileBox({required String text, required VoidCallback onTap, required Color textColor, required Color iconColor, required IconData icon}) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: Dimensions.h16),
+        padding: EdgeInsets.symmetric(
+          horizontal: Dimensions.h16,
+          vertical: Dimensions.h12,
+        ),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.onSurface,
+              blurRadius: 2,
+              offset: const Offset(
+                1,
+                1,
+              ),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 22,
+              ),
+            ),
+            horizontalWidth(12),
+            Expanded(
+              child: Text(
+                text,
+                style: fontStyleMedium16.copyWith(
+                  color: textColor,
                 ),
               ),
-              verticalHeight(Dimensions.h8),
-              GestureDetector(
-                onTap: _updateStatus,
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: Dimensions.h16,
-                    vertical: Dimensions.h12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: _status == 'Available'
-                              ? Colors.green
-                              : Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      horizontalWidth(8),
-                      Expanded(
-                        child: Text(
-                          _status ?? 'Available',
-                          style: fontStyleRegular14.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withOpacity(0.9),
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.keyboard_arrow_down,
-                        color: Colors.grey.shade600,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              verticalHeight(Dimensions.h30),
-
-              // Change Password tile (optional)
-              GestureDetector(
-                onTap: () {
-                  // TODO: navigate to change password screen
-                },
-                child: Container(
-                  margin: EdgeInsets.only(bottom: Dimensions.h16),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: Dimensions.h16,
-                    vertical: Dimensions.h12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.onSurface,
-                        blurRadius: 2,
-                        offset: const Offset(1, 1,),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurface.withAlpha(30),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.lock,
-                          color: AppColors.primary,
-                          size: 22,
-                        ),
-                      ),
-                      horizontalWidth(12),
-                      Expanded(
-                        child: Text(
-                          'Change Password',
-                          style: fontStyleMedium16.copyWith(
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.keyboard_arrow_right,
-                        color: Colors.grey.shade600,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Sign Out tile
-              GestureDetector(
-                onTap: _logout,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: Dimensions.h16,
-                    vertical: Dimensions.h12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.onSurface,
-                        blurRadius: 2,
-                        offset: const Offset(1, 1,),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurface.withAlpha(30),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.exit_to_app,
-                          color: Colors.red,
-                          size: 22,
-                        ),
-                      ),
-                      horizontalWidth(12),
-                      Expanded(
-                        child: Text(
-                          'Sign Out',
-                          style: fontStyleMedium16.copyWith(
-                            color: Colors.red,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.keyboard_arrow_right,
-                        color: Colors.grey.shade600,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
+            Icon(
+              Icons.keyboard_arrow_right,
+              color: Colors.grey.shade600,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget profileImage(){
+    return Stack(
+      alignment: Alignment.bottomRight,
+      children: [
+        Container(
+          width: Dimensions.w120,
+          height: Dimensions.w120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.accent,
+              width: 4,
+            ),
           ),
+          child: ClipOval(
+            child: (_profileImageUrl == null || _profileImageUrl!.isEmpty)
+                ? Image.asset(
+              AppImage.icAppLogo,
+              fit: BoxFit.cover,
+            )
+                : Image.network(
+              _profileImageUrl!,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: GestureDetector(
+            onTap: _pickImage,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.accent,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  Widget editUsername(){
+    return GestureDetector(
+      onTap: _updateUsername,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.edit,
+            color: AppColors.accent,
+            size: 18,
+          ),
+          horizontalWidth(6),
+          Text(
+            'Edit Username',
+            style: fontStyleMedium16.copyWith(
+              color: AppColors.accent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget buildStatusBox(){
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: _updateStatus,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: Dimensions.h16,
+          vertical: Dimensions.h12,
+        ),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.shade600,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _status == 'Available' ? Colors.green : Colors.grey,
+                shape: BoxShape.circle,
+              ),
+            ),
+            horizontalWidth(8),
+            Expanded(
+              child: Text(
+                _status ?? 'Available',
+                style: fontStyleRegular14.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.9),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down,
+              color: Colors.grey.shade600,
+            ),
+          ],
         ),
       ),
     );
   }
 }
-
-

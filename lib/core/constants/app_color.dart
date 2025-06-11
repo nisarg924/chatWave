@@ -12,4 +12,6 @@ class AppColors {
   static const Color notificationRed = Color(0xFFFF3B30);
   static const Color blackColor = Color(0xFF000000);
   static const Color borderColor = Color(0xFF000000);
+  static const Color messageBgColor = Color(0xFFdcf8c6);
+  static const Color messageBgColorDark = Color(0xFF373e4e);
 }
